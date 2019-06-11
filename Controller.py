@@ -11,23 +11,28 @@ import json
 
 car_ip = None
 car_port = 25006
-
 feed_port = 8001
 feed_url = "/stream.mjpg"
-
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 
 
-def sendMsg(action, value):
+def sendMsg(action, value = None):
+    """
+    Sends a message to the vehicle
+    Args:
+        action: The action to be taken
+        value: The value associated with that action, if needed (default None)
+    """
     data = {}
     data["action"] = action
     data["value"] = value    
 
     client.sendto(str.encode(json.dumps(data)), (car_ip, car_port))
 
-                  
-def videoLoop():    
+
+def videoLoop():
+    """ Starts the videofeed """
     r = requests.get('http://' + str(car_ip) + ':' + str(feed_port) + feed_url, stream=True)
     if(r.status_code == 200):
         bytesz = bytes()
@@ -47,6 +52,7 @@ def videoLoop():
     
     
 def controlLoop():
+    """ Starts the control loop """
     print("[*] Initializing control-system")
 
     controller = None
