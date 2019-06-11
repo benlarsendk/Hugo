@@ -7,9 +7,14 @@ import requests
 import numpy as np
 import threading
 import json
-#car_ip = "192.168.0.143"
-car_ip = "192.168.43.16"
+
+
+car_ip = None
 car_port = 25006
+
+feed_port = 8001
+feed_url = "/stream.mjpg"
+
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 
@@ -22,8 +27,8 @@ def sendMsg(action, value):
     client.sendto(str.encode(json.dumps(data)), (car_ip, car_port))
 
                   
-def videoLoop():
-    r = requests.get('http://192.168.0.143:8001/stream.mjpg', auth=('user', 'password'), stream=True)
+def videoLoop():    
+    r = requests.get('http://' + str(car_ip) + ':' + str(feed_port) + feed_url, stream=True)
     if(r.status_code == 200):
         bytesz = bytes()
         for chunk in r.iter_content(chunk_size=1024):
@@ -38,24 +43,24 @@ def videoLoop():
                 if cv2.waitKey(1) == 27:
                     exit(0)
     else:
-        print("Received unexpected status code {}".format(r.status_code))
+        print("[-] Received unexpected status code {}".format(r.status_code))
     
     
 def controlLoop():
+    print("[*] Initializing control-system")
+
     controller = None
     pygame.init()
-    pygame.joystick.init()
-    controller = pygame.joystick.Joystick(0)
-    controller.init()
-    
+    try:
+        pygame.joystick.init()
+        controller = pygame.joystick.Joystick(0)
+        controller.init()
+    except:
+        print("[-] Controller not connected\n[*] Keyboard only")
     screen = pygame.display.set_mode((640, 480))
-    clock = pygame.time.Clock()
-
-    
+    print("[+] Control-system online\n[*] Press 'q' to quit")
     while True:
-        pressed = pygame.key.get_pressed()
-        
-        
+        pressed = pygame.key.get_pressed()        
         for event in pygame.event.get():
             if event.type == pygame.JOYAXISMOTION and event.axis == 2:
                 val = int((round(event.value,2) +1) * 17 + 990)
@@ -87,14 +92,29 @@ def controlLoop():
                 elif event.key == pygame.K_LEFT:
                     print("Left")
                     sendMsg("Left",1024)
+                elif event.key == pygame.K_q:
+                    try:
+                        controller.quit()
+                    except:
+                        pass
+                    return
             elif event.type == pygame.KEYUP and (event.key == pygame.K_RIGHT or event.key == pygame.K_LEFT):
                 print("X-Idle")
                 sendMsg("X-Idle",0)
             elif event.type == pygame.KEYUP and (event.key == pygame.K_UP or event.key == pygame.K_DOWN):
                 print("Y-Idle")
                 sendMsg("Y-Idle",1024)
-    
 
-#thread = threading.Thread(target=videoLoop)                
-#thread.start()
-controlLoop()
+
+def main():
+    global car_ip
+    car_ip = input("[*] Enter IP of Hugo: ")
+    feed = input("[*] Start video feed? [y/n]: ")
+    if feed == 'y':
+        thread = threading.Thread(target=videoLoop)                
+        thread.start()    
+    controlLoop()
+
+
+if __name__ == "__main__":
+    main()
