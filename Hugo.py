@@ -3,6 +3,21 @@ import wiringpi
 import time
 import json
 
+
+""" Pin definitions """
+
+FORWARD = 13
+BACKWARD = 12
+RIGHT = 21
+LEFT = 20
+STATUS = 26
+
+""" General definitions """
+PWM = 2 
+ON = 1
+OFF = 0
+
+
 def initialize_pins():
     """ Initialize the pins needed for vehicle control. """
     
@@ -10,26 +25,37 @@ def initialize_pins():
     wiringpi.wiringPiSetupGpio()
 
     # Set pins GPIO20-21 to Output-mode
-    wiringpi.pinMode(20,1) 
-    wiringpi.pinMode(21,1) 
+    wiringpi.pinMode(RIGHT,ON) 
+    wiringpi.pinMode(LEFT,ON) 
 
     # Set pins GPIO20-21 Low
-    wiringpi.digitalWrite(20,0)
-    wiringpi.digitalWrite(21,0)
+    wiringpi.digitalWrite(RIGHT,OFF)
+    wiringpi.digitalWrite(LEFT,OFF)
 
     # Set pins GPIO12-13 to Alternative mode (PWM)
-    wiringpi.pinMode(13,2)      
-    wiringpi.pinMode(12,2)
+    wiringpi.pinMode(FORWARD,PWM)      
+    wiringpi.pinMode(BACKWARD,PWM)
 
+    # Set GPIO26 as output (Status light)
+    wiringpi.PinMode(STATUS,ON)
+
+    # Set GPIO26 Low
+    wiringpi.digitalWrite(STATUS,OFF)
+
+
+
+def set_status_light(status):
+        wiringpi.digitalWrite(STATUS, status)
+        
 def turn_right():
     """ Turn the vehicle right """
-    wiringpi.digitalWrite(20,0)
-    wiringpi.digitalWrite(21,1)
+    wiringpi.digitalWrite(LEFT,OFF)
+    wiringpi.digitalWrite(RIGHT,ON)
 
 def turn_left():
     """ Turn the vehicle left """
-    wiringpi.digitalWrite(20,1) 
-    wiringpi.digitalWrite(21,0)
+    wiringpi.digitalWrite(LEFT,ON) 
+    wiringpi.digitalWrite(RIGHT,OFF)
 
 
 
@@ -47,8 +73,8 @@ def engine_forward(speed = 0):
     elif speed > 1024:
         speed = 1024
 
-    wiringpi.pwmWrite(13, speed)  
-    wiringpi.pwmWrite(12, 0)
+    wiringpi.pwmWrite(FORWARD, speed)  
+    wiringpi.pwmWrite(BACKWARD, OFF)
         
 def engine_backwards(speed = 0):
     """
@@ -65,26 +91,26 @@ def engine_backwards(speed = 0):
         speed = 1024
         
 
-    wiringpi.pwmWrite(12, speed)
-    wiringpi.pwmWrite(13, 0)
+    wiringpi.pwmWrite(BACKWORD, speed)
+    wiringpi.pwmWrite(FORWARD, OFF)
 
 
 def x_idle():
     """ Sets the turn-engine to idle (X-axis) """
-    wiringpi.digitalWrite(20,0)
-    wiringpi.digitalWrite(21,0)
+    wiringpi.digitalWrite(LEFT,OFF)
+    wiringpi.digitalWrite(RIGHT,OFF)
 
 def y_idle():
     """ Sets the moving-engine to idle (Y-axis) """
-    wiringpi.pwmWrite(13,0)
-    wiringpi.pwmWrite(12,0)
+    wiringpi.pwmWrite(FOORWARD,OFF)
+    wiringpi.pwmWrite(BACKWARD,OFF)
         
 def all_idle():
     """ Sets all engines idle """
-    wiringpi.digitalWrite(20,0)
-    wiringpi.digitalWrite(21,0)
-    wiringpi.pwmWrite(13, 0)
-    wiringpi.pwmWrite(12, 0)
+    wiringpi.digitalWrite(LEFT,OFF)
+    wiringpi.digitalWrite(RIGHT,OFF)
+    wiringpi.pwmWrite(FORWARD, OFF)
+    wiringpi.pwmWrite(BACKWARD, OFF)
     
 def handleCommand(command):
     """
@@ -135,7 +161,7 @@ def initialize_server():
     s.bind((localhost,listen_port))
 
     print("[+] Done")
-
+    set_status_light(ON)
     while 1:
         data, addr = s.recvfrom(buffersize)
         handleCommand(data)
