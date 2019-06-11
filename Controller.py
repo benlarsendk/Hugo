@@ -9,15 +9,14 @@ import threading
 import json
 
 
-car_ip = None
-car_port = 25006
-feed_port = 8001
-feed_url = "/stream.mjpg"
-client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+CAR_IP = None
+CAR_PORT = 25006
+FEED_PORT = 8001
+FEED_URL = "/stream.mjpg"
+CLIENT = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 
-
-def sendMsg(action, value = None):
+def sendMsg(action, value=None):
     """
     Sends a message to the vehicle
     Args:
@@ -26,14 +25,15 @@ def sendMsg(action, value = None):
     """
     data = {}
     data["action"] = action
-    data["value"] = value    
+    data["value"] = value
 
-    client.sendto(str.encode(json.dumps(data)), (car_ip, car_port))
+    client.sendto(str.encode(json.dumps(data)), (CAR_IP, CAR_PORT))
 
 
 def videoLoop():
     """ Starts the videofeed """
-    r = requests.get('http://' + str(car_ip) + ':' + str(feed_port) + feed_url, stream=True)
+    url = "http://{0}:{1}{2}".format(CAR_IP, FEED_PORT, FEED_URL)
+    r = requests.get(url, stream=True)
     if(r.status_code == 200):
         bytesz = bytes()
         for chunk in r.iter_content(chunk_size=1024):
@@ -49,8 +49,8 @@ def videoLoop():
                     exit(0)
     else:
         print("[-] Received unexpected status code {}".format(r.status_code))
-    
-    
+
+
 def controlLoop():
     """ Starts the control loop """
     print("[*] Initializing control-system")
@@ -66,61 +66,61 @@ def controlLoop():
     screen = pygame.display.set_mode((640, 480))
     print("[+] Control-system online\n[*] Press 'q' to quit")
     while True:
-        pressed = pygame.key.get_pressed()        
+        pressed = pygame.key.get_pressed()
         for event in pygame.event.get():
             if event.type == pygame.JOYAXISMOTION and event.axis == 2:
-                val = int((round(event.value,2) +1) * 17 + 990)
+                val = int((round(event.value, 2) + 1) * 17 + 990)
                 sendMsg("Backwards", val)
-                print(val)   
+                print(val)
             elif event.type == pygame.JOYAXISMOTION and event.axis == 5:
-                val = int((round(event.value,2) + 1) * 17 + 990)
+                val = int((round(event.value, 2) + 1) * 17 + 990)
                 sendMsg("Forward", val)
                 print(val)
             elif event.type == pygame.JOYHATMOTION:
                 if event.value[0] == 0:
-                    sendMsg("X-Idle",0)
+                    sendMsg("X-Idle", 0)
                 elif event.value[0] == -1:
-                    sendMsg("Left",1024)
+                    sendMsg("Left", 1024)
                 elif event.value[0] == 1:
-                    sendMsg("Right",1024)
+                    sendMsg("Right", 1024)
             elif event.type == pygame.QUIT:
                 return
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     print("Forward")
-                    sendMsg("Forward",1024)
+                    sendMsg("Forward", 1024)
                 elif event.key == pygame.K_DOWN:
                     print("Backwards")
-                    sendMsg("Backwards",1024)
+                    sendMsg("Backwards", 1024)
                 elif event.key == pygame.K_RIGHT:
                     print("Right")
-                    sendMsg("Right",1024)
+                    sendMsg("Right", 1024)
                 elif event.key == pygame.K_LEFT:
                     print("Left")
-                    sendMsg("Left",1024)
+                    sendMsg("Left", 1024)
                 elif event.key == pygame.K_q:
                     try:
                         controller.quit()
                     except:
                         pass
                     return
-            elif event.type == pygame.KEYUP and (event.key == pygame.K_RIGHT or event.key == pygame.K_LEFT):
-                print("X-Idle")
-                sendMsg("X-Idle",0)
-            elif event.type == pygame.KEYUP and (event.key == pygame.K_UP or event.key == pygame.K_DOWN):
-                print("Y-Idle")
-                sendMsg("Y-Idle",1024)
+            elif event.type == pygame.KEYUP:
+                if (event.key == pygame.K_RIGHT or event.key == pygame.K_LEFT):
+                    print("X-Idle")
+                    sendMsg("X-Idle", 0)
+            elif event.type == pygame.KEYUP:
+                if (event.key == pygame.K_UP or event.key == pygame.K_DOWN):
+                    print("Y-Idle")
+                    sendMsg("Y-Idle", 1024)
 
 
 def main():
-    global car_ip
-    car_ip = input("[*] Enter IP of Hugo: ")
-    feed = input("[*] Start video feed? [y/n]: ")
-    if feed == 'y':
-        thread = threading.Thread(target=videoLoop)                
-        thread.start()    
+    global CAR_IP
+    CAR_IP = input("[*] Enter IP of Hugo: ")
+    if input("[*] Start video feed? [y/n]: ") == 'y':
+        thread = threading.Thread(target=videoLoop)
+        thread.start()
     controlLoop()
-
 
 if __name__ == "__main__":
     main()
