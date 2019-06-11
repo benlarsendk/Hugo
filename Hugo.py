@@ -17,6 +17,8 @@ PWM = 2
 ON = 1
 OFF = 0
 
+LISTEN_PORT = 25006
+LOCALHOST = "0.0.0.0"
 
 def initialize_pins():
     """ Initialize the pins needed for vehicle control. """
@@ -151,14 +153,12 @@ def handleCommand(command):
 
 def initialize_server():
     """ Initializes UDP Serverlistener """
-    listen_port = 25006
-    localhost = "0.0.0.0"
     buffersize = 1024
     
     print("[*] Starting UDP Server on port {0}...".format(listen_port))
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.bind((localhost,listen_port))
+    s.bind((LOCALHOST,LISTEN_PORT))
 
     print("[+] Done")
     set_status_light(ON)
